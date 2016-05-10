@@ -73,6 +73,10 @@ function check_device_communication () {
     fi
 
     log "Checking communication with device"
+
+    log "Giving $WAIT_CONNECTION_TIME seconds to the modem to register"
+    sleep $WAIT_CONNECTION_TIME
+
     cmd="+CSQ"
     mmid=$(mmcli -L | grep -Po "/\d+" | cut -d / -f 2)
     mmcli -m $mmid --command="$cmd"
@@ -91,6 +95,9 @@ function check_connection () {
         log "Skipping connection check"
         return 1
     fi
+
+    log "Giving $WAIT_CONNECTION_TIME seconds to the modem to connect"
+    sleep $WAIT_CONNECTION_TIME
 
     log "Checking connection"
     if [ 1 -eq $(ifconfig $IFACE | wc -l) ]; then
@@ -152,7 +159,6 @@ for i in $(seq $NTESTS); do
         [ 0 -eq $? ] && continue
 
         ret=-3
-        sleep $WAIT_CONNECTION_TIME
         check_connection
         [ 0 -eq $? ] && continue
 
