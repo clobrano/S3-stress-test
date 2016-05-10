@@ -11,6 +11,7 @@ exec 1> >(logger -s -t $(basename $0)) 2>&1
 
 # Device configuration
 VID=413c
+PID=81ba
 DEV_ID="1-8.1"
 
 # Test configuration
@@ -44,38 +45,6 @@ while getopts "cd:mn:p:s" opt; do
     esac
 done
 
-echo $CHECK_CONNECTION, $DEV_ID, $SHUTDOWN_MM, $DISABLE_PERST, $CHECK_SERIAL
-
-exit 1
-
-while getopts "c:d:i:m:n:p:r:" opt; do
-    case $opt in
-    c)
-        CHECK_CONNECTION=$OPTARG
-        ;;
-    d)
-        PID=$OPTARG
-        ;;
-    i)
-        DEV_ID=$OPTARG
-        ;;
-    m)
-        SHUTDOWN_MM=$OPTARG
-        ;;
-    n)
-        NTESTS=$OPTARG
-        ;;
-    p)
-        DISABLE_PERST=$OPTARG
-        ;;
-    r)
-        CHECK_COMMUNICATION=$OPTARG
-        ;;
-esac
-done
-
-PERST_PATH=/sys/bus/usb/devices/$DEV_ID/power/persist
-
 function log () {
     echo "[+] " $@
 }
@@ -85,7 +54,7 @@ function err () {
 }
 
 function log_start() {
-    echo "<<< Test #$i/$NTESTS: suspend $PID for $S3_DURATION sec. KILL_MM:$SHUTDOWN_MM. DIS_PERST:$DISABLE_PERST. DEV_ID:$DEV_ID."
+    log "Test #$i/$NTESTS: suspend $VID:$PID for $S3_DURATION sec."
 }
 
 function check_device_presence () {
@@ -136,6 +105,8 @@ function check_connection () {
 }
 
 function check_persistence () {
+    PERST_PATH=/sys/bus/usb/devices/$DEV_ID/power/persist
+
     log "Current USB persistence value $(cat $PERST_PATH)."
     if  [ ! -z $DISABLE_PERST ]; then
         echo 0 > $PERST_PATH
@@ -146,7 +117,14 @@ function check_persistence () {
 
 
 # MAIN
-if [ 1 -eq $SHUTDOWN_MM ]; then
+log "Test config:"
+[ ! -z $SHUTDOWN_MM ] && log "Disabling MM" || log "Keeping MM"
+[ ! -z $DISABLE_PERST ] && log "Disabling USB persistence" || log "Not disabling USB persistence"
+[ ! -z $CHECK_SERIAL ] && log "Will check serial communication"
+[ ! -z $CHECK_CONNECTION ] && log "Will check connection"
+
+
+if [ ! -z $SHUTDOWN_MM ]; then
     log "Shutting down MM"
     systemctl stop ModemManager
 else
@@ -159,7 +137,7 @@ for i in $(seq $NTESTS); do
     check_persistence
 
     rtcwake -m mem -s $S3_DURATION
-USB persistence value
+    
     echo "<<< Test S3 #$i/$NTESTS: wake up"
 
     ret=0
