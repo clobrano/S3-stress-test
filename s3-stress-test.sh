@@ -73,9 +73,6 @@ function check_device_communication () {
     fi
 
     log "Checking communication with device"
-    log "Giving $WAIT_CONNECTION_TIME seconds to the ModemManager to initialize the modem"
-    sleep $WAIT_CONNECTION_TIME
-
     cmd="+CSQ"
     mmid=$(mmcli -L | grep -Po "/\d+" | cut -d / -f 2)
     mmcli -m $mmid --command="$cmd"
@@ -84,8 +81,10 @@ function check_device_communication () {
         log "Communication test PASSED"
         return 1
     fi
-    
+   
     log "Modem still not initialized, check again later"
+    log "Giving $WAIT_CONNECTION_TIME seconds to the ModemManager to initialize the modem"
+    sleep $WAIT_CONNECTION_TIME
     return 0
 }
 
@@ -96,9 +95,6 @@ function check_connection () {
     fi
 
     log "Checking connection"
-    log "Giving $WAIT_CONNECTION_TIME seconds to the modem to connect"
-    sleep $WAIT_CONNECTION_TIME
-
     if [ 1 -eq $(ifconfig $IFACE | wc -l) ]; then
         ping 8.8.8.8 -I $IFACE -c 3
         if [ 0 -eq $? ]; then
@@ -108,6 +104,9 @@ function check_connection () {
     fi
 
     log "Modem not connected. Check again later"
+    log "Giving $WAIT_CONNECTION_TIME seconds to the modem to connect"
+    sleep $WAIT_CONNECTION_TIME
+
     return 0
 }
 
