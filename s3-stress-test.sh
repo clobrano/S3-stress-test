@@ -22,7 +22,7 @@ S3_DURATION=10
 WAIT_CONNECTION_TIME=10
 WAIT_DEVICE_TIME=1
 
-while getopts "cd:mn:p:s" opt; do
+while getopts "cd:mn:ps" opt; do
     case $opt in
         c)
             CHECK_CONNECTION=1
@@ -86,7 +86,6 @@ function check_device_communication () {
         return 1
     fi
 
-    err "Communication test FAILED"
     return 0
 }
 
@@ -107,7 +106,7 @@ function check_connection () {
             return 1
         fi
     fi
-    err "Connection test FAILED"
+
     return 0
 }
 
@@ -132,10 +131,7 @@ log "Test config ================"
 echo
 
 if [ ! -z $SHUTDOWN_MM ]; then
-    log "Shutting down MM"
     systemctl stop ModemManager
-else
-    log "Keep MM up and running"
 fi
 
 for i in $(seq $NTESTS); do
