@@ -73,7 +73,6 @@ function check_device_communication () {
     fi
 
     log "Checking communication with device"
-
     log "Giving $WAIT_CONNECTION_TIME seconds to the modem to register"
     sleep $WAIT_CONNECTION_TIME
 
@@ -85,7 +84,8 @@ function check_device_communication () {
         log "Communication test PASSED"
         return 1
     fi
-
+    
+    log "Modem still not registered, check again later"
     return 0
 }
 
@@ -95,10 +95,10 @@ function check_connection () {
         return 1
     fi
 
+    log "Checking connection"
     log "Giving $WAIT_CONNECTION_TIME seconds to the modem to connect"
     sleep $WAIT_CONNECTION_TIME
 
-    log "Checking connection"
     if [ 1 -eq $(ifconfig $IFACE | wc -l) ]; then
         ping 8.8.8.8 -I $IFACE -c 3
         if [ 0 -eq $? ]; then
@@ -107,6 +107,7 @@ function check_connection () {
         fi
     fi
 
+    log "Modem not connected. Check again later"
     return 0
 }
 
