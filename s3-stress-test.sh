@@ -73,19 +73,19 @@ function check_device_communication () {
     fi
 
     log "Checking communication with device"
-    log "Giving $WAIT_CONNECTION_TIME seconds to the modem to register"
+    log "Giving $WAIT_CONNECTION_TIME seconds to the ModemManager to initialize the modem"
     sleep $WAIT_CONNECTION_TIME
 
     cmd="+CSQ"
     mmid=$(mmcli -L | grep -Po "/\d+" | cut -d / -f 2)
     mmcli -m $mmid --command="$cmd"
 
-    if [ 0 -eq $(mmcli -m $mmid --command="$cmd"? 2>&1 | grep error | wc -l) ]; then
+    if [ 0 -eq $(mmcli -m $mmid --command="$cmd" 2>&1 | grep error | wc -l) ]; then
         log "Communication test PASSED"
         return 1
     fi
     
-    log "Modem still not registered, check again later"
+    log "Modem still not initialized, check again later"
     return 0
 }
 
