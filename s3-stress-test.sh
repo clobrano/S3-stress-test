@@ -95,7 +95,7 @@ function check_connection () {
     fi
 
     log "Checking connection"
-    if [ 1 -eq $(ifconfig $IFACE | wc -l) ]; then
+    if [ 0 -lt $(ifconfig $IFACE | wc -l) ]; then
         ping 8.8.8.8 -I $IFACE -c 3
         if [ 0 -eq $? ]; then
             log "Connection Test PASSED"
