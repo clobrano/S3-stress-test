@@ -141,7 +141,7 @@ for i in $(seq $NTESTS); do
 
     rtcwake -m mem -s $S3_DURATION
     
-    echo "<<< Test S3 #$i/$NTESTS: wake up"
+    log "Test S3 #$i/$NTESTS: wake up"
 
     ret=0
     for j in $(seq $RETRIES); do
@@ -165,19 +165,19 @@ for i in $(seq $NTESTS); do
 
     case $ret in
         -1)
-           echo "<<< Could not find device $VID:$PID"
+           log "Could not find device $VID:$PID"
            lsusb
            ;;
         -2)
-            echo "<<< Could not communicate with serial device"
+            log "Could not communicate with serial device"
             ;;
         -3)
-            echo "<<< Modem is not connected"
+            log "Modem is not connected"
             ;;
     esac
 
-    [ $ret -lt 0 ] && echo "<<< Test #$i NOT passed" && break;
-    echo "<<< Test #$i passed!"
+    [ $ret -lt 0 ] && log "Test #$i NOT passed" && break;
+    log "Test #$i passed!"
 done
 
 
