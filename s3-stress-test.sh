@@ -60,7 +60,7 @@ function log_start() {
 function check_device_presence () {
     if [ 1 -eq $(lsusb | grep $VID:$PID | wc -l) ]; then
        log "Device $VID:$PID found"
-       lsusb
+       lsusb | grep $VID:$PID
        return 1
     fi
     return 0
@@ -68,7 +68,7 @@ function check_device_presence () {
 
 function check_device_communication () {
     if [ -z $CHECK_SERIAL ]; then
-        log "Skipping Test communication with serial device"
+        log "Skipping check communication with serial device"
         return 1
     fi
 
@@ -117,12 +117,12 @@ function check_persistence () {
 
 
 # MAIN
-log "Test config:"
+log "Test config ================"
 [ ! -z $SHUTDOWN_MM ] && log "Disabling MM" || log "Keeping MM"
 [ ! -z $DISABLE_PERST ] && log "Disabling USB persistence" || log "Not disabling USB persistence"
 [ ! -z $CHECK_SERIAL ] && log "Will check serial communication"
 [ ! -z $CHECK_CONNECTION ] && log "Will check connection"
-
+echo
 
 if [ ! -z $SHUTDOWN_MM ]; then
     log "Shutting down MM"
@@ -149,12 +149,12 @@ for i in $(seq $NTESTS); do
 
         ret=-2
         check_device_communication
-        [ 0 eq $? ] && continue
+        [ 0 -eq $? ] && continue
 
         ret=-3
         sleep $WAIT_CONNECTION_TIME
         check_connection
-        [ 0 eq $? ] && continue
+        [ 0 -eq $? ] && continue
 
         # All tests passed
         ret=0
