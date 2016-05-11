@@ -185,7 +185,7 @@ for i in $(seq $NTESTS); do
         log "Test #$i NOT passed";
     else
         log "Test #$i passed!"
-        let $(passed_tests += 1)
+        let "passed_tests += 1"
     fi
     echo
 done
