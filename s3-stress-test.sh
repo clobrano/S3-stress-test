@@ -17,7 +17,7 @@ DEV_ID="1-8.1"
 # Test configuration
 IFACE=ppp0
 NTESTS=200
-RETRIES=10
+RETRIES=5
 S3_DURATION=10
 WAIT_CONNECTION_TIME=10
 WAIT_DEVICE_TIME=1
@@ -121,8 +121,11 @@ function check_persistence () {
     fi
 }
 
-
+# ===================================================================================
 # MAIN
+# ===================================================================================
+passed_tests=0
+
 log "Test config ================"
 [ ! -z $SHUTDOWN_MM ] && log "Disabling MM" || log "Keeping MM"
 [ ! -z $DISABLE_PERST ] && log "Disabling USB persistence" || log "Not disabling USB persistence"
@@ -143,26 +146,21 @@ for i in $(seq $NTESTS); do
 
     log "Test S3 #$i/$NTESTS: wake up"
 
-    ret=0
     for j in $(seq $RETRIES); do
 
-        ret=-1
         check_device_presence
-        [ 0 -eq $? ] && continue
+        [ 0 -eq $? ] && ret=-1 && continue
 
         check_persistence
 
-        ret=-2
         check_device_communication
-        [ 0 -eq $? ] && continue
+        [ 0 -eq $? ] && ret=-2 && continue
 
-        ret=-3
         check_connection
-        [ 0 -eq $? ] && continue
+        [ 0 -eq $? ] && ret=-3 && continue
 
         # All tests passed
         ret=0
-        break
     done
 
     case $ret in
@@ -178,8 +176,14 @@ for i in $(seq $NTESTS); do
             ;;
     esac
 
-    [ $ret -lt 0 ] && log "Test #$i NOT passed" && break;
-    log "Test #$i passed!"
+    if [ $ret -lt 0 ]; then
+        log "Test #$i NOT passed";
+    else
+        log "Test #$i passed!"
+        let $(passed_tests += 1)
+    fi
 done
+
+log "Test passed $passed_tests/$NTESTS"
 
 
