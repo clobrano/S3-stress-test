@@ -116,7 +116,7 @@ function check_persistence () {
     log "Current USB persistence value $(cat $PERST_PATH)."
     if  [ ! -z $DISABLE_PERST ]; then
         echo 0 > $PERST_PATH
-        log "New USB persistence value $(cat $PERST_PATH)."
+        log "USB persistence value $(cat $PERST_PATH)."
         sleep 1
     fi
 }
@@ -141,8 +141,6 @@ for i in $(seq $NTESTS); do
 
     rtcwake -m mem -s $S3_DURATION
 
-    check_persistence
-    
     log "Test S3 #$i/$NTESTS: wake up"
 
     ret=0
@@ -151,6 +149,8 @@ for i in $(seq $NTESTS); do
         ret=-1
         check_device_presence
         [ 0 -eq $? ] && continue
+
+        check_persistence
 
         ret=-2
         check_device_communication
