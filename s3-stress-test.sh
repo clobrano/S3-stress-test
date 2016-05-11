@@ -140,6 +140,8 @@ for i in $(seq $NTESTS); do
     check_persistence
 
     rtcwake -m mem -s $S3_DURATION
+
+    check_persistence
     
     log "Test S3 #$i/$NTESTS: wake up"
 
