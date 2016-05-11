@@ -149,7 +149,7 @@ for i in $(seq $NTESTS); do
 
     for j in $(seq $RETRIES); do
         log " "
-        log "Attempt $j of $RETRIES"
+        log "Test #$i/$NTESTS: Attempt $j of $RETRIES"
 
         check_device_presence
         [ 0 -eq $? ] && ret=-1 && continue
