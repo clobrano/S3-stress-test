@@ -168,6 +168,7 @@ for i in $(seq $NTESTS); do
 
         # All tests passed
         ret=0
+        break
     done
 
     case $ret in
