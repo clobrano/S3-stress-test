@@ -52,7 +52,6 @@ function err () {
 }
 
 function log_start() {
-    log "Running test with flags $@"
     log "Test #$i/$NTESTS: suspend $VID:$PID for $S3_DURATION sec."
 }
 
