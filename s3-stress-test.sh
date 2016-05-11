@@ -51,10 +51,6 @@ function err () {
     log "[ERROR]" $@
 }
 
-function log_start() {
-    log "Test #$i/$NTESTS: suspend $VID:$PID for $S3_DURATION sec."
-}
-
 function check_device_presence () {
     if [ 1 -eq $(lsusb | grep $VID:$PID | wc -l) ]; then
        log "Device $VID:$PID found"
@@ -142,7 +138,7 @@ if [ ! -z $SHUTDOWN_MM ]; then
 fi
 
 for i in $(seq $NTESTS); do
-    log_start
+    log "Test #$i/$NTESTS (#$passed_tests passed): suspend $VID:$PID for $S3_DURATION sec."
 
     check_persistence
 
