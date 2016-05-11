@@ -5,8 +5,6 @@
 # * Check modem is registered through ModemManager
 # * Check modem is connected through ppp
 
-VER=0.3.2
-
 exec 1> >(logger -s -t $(basename $0)) 2>&1
 
 # Device configuration
