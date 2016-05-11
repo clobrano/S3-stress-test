@@ -115,11 +115,13 @@ function check_connection () {
 function check_persistence () {
     PERST_PATH=/sys/bus/usb/devices/$DEV_ID/power/persist
 
-    log "Current USB persistence value $(cat $PERST_PATH)."
     if  [ ! -z $DISABLE_PERST ]; then
+        log "Current USB persistence value $(cat $PERST_PATH). Changing it to 0."
         echo 0 > $PERST_PATH
-        log "USB persistence value $(cat $PERST_PATH)."
+        log "USB persistence value is now $(cat $PERST_PATH)."
         sleep 1
+    else
+        log "Current USB persistence value $(cat $PERST_PATH). Keeping this value."
     fi
 }
 
@@ -133,21 +135,20 @@ log "Test config ================"
 [ ! -z $DISABLE_PERST ] && log "Disabling USB persistence" || log "Not disabling USB persistence"
 [ ! -z $CHECK_SERIAL ] && log "Will check serial communication"
 [ ! -z $CHECK_CONNECTION ] && log "Will check connection"
-echo
+log " "
 
 if [ ! -z $SHUTDOWN_MM ]; then
     systemctl stop ModemManager
 fi
 
 for i in $(seq $NTESTS); do
-    echo
     log_start
 
     check_persistence
 
     rtcwake -m mem -s $S3_DURATION
 
-    echo
+    log " "
     log "Test S3 #$i/$NTESTS: wake up"
 
     for j in $(seq $RETRIES); do
@@ -187,7 +188,7 @@ for i in $(seq $NTESTS); do
         log "Test #$i passed!"
         let "passed_tests += 1"
     fi
-    echo
+    log " "
 done
 
 log "Test passed $passed_tests/$NTESTS"
