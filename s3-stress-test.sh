@@ -73,14 +73,18 @@ function check_device_communication () {
     log "Checking communication with device"
     cmd="+CSQ"
     mmid=$(mmcli -L | grep -Po "/\d+" | cut -d / -f 2)
-    mmcli -m $mmid --command="$cmd"
 
-    if [ 0 -eq $(mmcli -m $mmid --command="$cmd" 2>&1 | grep error | wc -l) ]; then
-        log "Communication test PASSED"
-        return 1
+    if [ ! -z $mmdi ]; then
+
+        mmcli -m $mmid --command="$cmd"
+
+        if [ 0 -eq $(mmcli -m $mmid --command="$cmd" 2>&1 | grep error | wc -l) ]; then
+            log "Communication test PASSED"
+            return 1
+        fi
     fi
-   
-    log "Modem still not initialized, check again later"
+
+    log "Modem not initialized yet, check again later"
     log "Giving $WAIT_CONNECTION_TIME seconds to the ModemManager to initialize the modem"
     sleep $WAIT_CONNECTION_TIME
     return 0
@@ -136,15 +140,18 @@ if [ ! -z $SHUTDOWN_MM ]; then
 fi
 
 for i in $(seq $NTESTS); do
+    echo
     log_start
 
     check_persistence
 
     rtcwake -m mem -s $S3_DURATION
 
+    echo
     log "Test S3 #$i/$NTESTS: wake up"
 
     for j in $(seq $RETRIES); do
+        log "Attempt $j of $RETRIES"
 
         check_device_presence
         [ 0 -eq $? ] && ret=-1 && continue
@@ -180,6 +187,7 @@ for i in $(seq $NTESTS); do
         log "Test #$i passed!"
         let $(passed_tests += 1)
     fi
+    echo
 done
 
 log "Test passed $passed_tests/$NTESTS"
