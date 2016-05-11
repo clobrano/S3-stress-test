@@ -14,7 +14,7 @@ DEV_ID="1-8.1"
 
 # Test configuration
 IFACE=ppp0
-NTESTS=200
+NTESTS=100
 RETRIES=5
 S3_DURATION=10
 WAIT_CONNECTION_TIME=10
@@ -52,6 +52,7 @@ function err () {
 }
 
 function log_start() {
+    log "Running test with flags $@"
     log "Test #$i/$NTESTS: suspend $VID:$PID for $S3_DURATION sec."
 }
 
