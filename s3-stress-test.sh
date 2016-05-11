@@ -152,6 +152,7 @@ for i in $(seq $NTESTS); do
     log "Test S3 #$i/$NTESTS: wake up"
 
     for j in $(seq $RETRIES); do
+        log " "
         log "Attempt $j of $RETRIES"
 
         check_device_presence
