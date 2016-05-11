@@ -74,7 +74,7 @@ function check_device_communication () {
     cmd="+CSQ"
     mmid=$(mmcli -L | grep -Po "/\d+" | cut -d / -f 2)
 
-    if [ ! -z $mmdi ]; then
+    if [ ! -z $mmid ]; then
 
         mmcli -m $mmid --command="$cmd"
 
