@@ -55,7 +55,7 @@ do
             shift;;
 
         --check-communication)
-            CHECK_SERIAL=1
+            CHECK_COMMUNICATION=1
             shift;;
 
         --check-connection)
@@ -141,33 +141,6 @@ do
     esac
 done
 
-
-#while getopts "cd:mn:pst:" opt; do
-#    case $opt in
-#        c)
-#            CHECK_CONNECTION=1
-#            ;;
-#        d)
-#            DEV_ID=$OPTARG
-#            ;;
-#        m)
-#            SHUTDOWN_MM=1
-#            ;;
-#        n)
-#            NTESTS=$OPTARG
-#            ;;
-#        p)
-#            DISABLE_PERST=1
-#            ;;
-#        s)
-#            CHECK_SERIAL=1
-#            ;;
-#        t)
-#            STATE=$OPTARG
-#            ;;
-#    esac
-#done
-
 function log () {
     echo "[+] " $@
 }
@@ -177,7 +150,7 @@ function err () {
 }
 
 function log_start () {
-    log "check communication: ${CHECK_SERIAL:-disabled}"
+    log "check communication: ${CHECK_COMMUNICATION:-disabled}"
     log "check connection:    ${CHECK_CONNECTION:-disabled}"
     log "dev-id:              $DEV_ID"
     log "state:               $STATE"
@@ -201,7 +174,7 @@ function check_device_presence () {
 }
 
 function check_device_communication () {
-    if [ -z $CHECK_SERIAL ]; then
+    if [ -z $CHECK_COMMUNICATION ]; then
         log "Skipping check communication with serial device"
         return 1
     fi
@@ -293,15 +266,7 @@ passed_tests=0
 log "Test config ================"
 log_start
 exit 0
-#[ ! -z $SHUTDOWN_MM ] && log "Disabling MM" || log "Keeping MM"
-#[ ! -z $DISABLE_PERST ] && log "Disabling USB persistance" || log "Not disabling USB persistance"
-#[ ! -z $CHECK_SERIAL ] && log "Will check serial communication"
-#[ ! -z $CHECK_CONNECTION ] && log "Will check connection"
-#log " "
-#
-#if [ ! -z $SHUTDOWN_MM ]; then
-#    systemctl stop ModemManager
-#fi
+
 
 for i in $(seq $NTESTS); do
     log "Test #$i/$NTESTS (#$passed_tests passed): suspend $VID:$PID to $STATE for $TIME_SUSPEND sec."
