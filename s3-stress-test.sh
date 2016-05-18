@@ -1,30 +1,36 @@
 #!/usr/bin/env bash
-#  S3 (suspend) stress test using rtcwake
+# S3 (suspend) stress test using rtcwake
 # Available checks:
 # * Check device with given VID/PID exists
 # * Check modem is registered through ModemManager
 # * Check modem is connected through ppp
 
-#function usage() {
-#    Usage:
-#        $0 [options]
-#
-#    Options:
-#    --check-communication: check whether the ModemManager can communicate with the device. MM's debug must be enabled in ordere to send AT+CSQ command.
-#    --check-connection: check whether the modem connects at resume
-#    --dev-id: the device ID in sysfs (e.g. 1-4.1, 1-8.1). This is part of the path to the power/persistance file. Not needed if --usb-persistance is not provided.
-#    --state: "mem" suspends the system to RAM (S3), "disk" to memory (S4)
-#    --usb-persistance: 0 disables USB persistance feature, 1 enables it
-#    --shutdown-mm: disable ModemManager
-#    -i|--iface: network interface to check for connection (e.g. ppp0, wwan0)
-#    -n|--num-tests: number of tests to perform
-#    -s|--stop-fail: stop the test at the first failure
-#    -t|--time-suspend: time to wait for resume
-#}
+function usage() {
+    cat << EOF
+    Usage:
+
+        $0 [options]
+
+    Options:
+
+        --vid: Vendor ID
+        --pid: Product ID
+        --check-communication: check whether the ModemManager can communicate with the device. MM's debug must be enabled in ordere to send AT+CSQ command.
+        --check-connection: check whether the modem connects at resume
+        --dev-id: the device ID in sysfs (e.g. 1-4.1, 1-8.1). This is part of the path to the power/persistance file. Not needed if --usb-persistance is not provided.
+        --state: "mem" suspends the system to RAM (S3), "disk" to memory (S4)
+        --usb-persistance: 0 disables USB persistance feature, 1 enables it
+        --shutdown-mm: disable ModemManager
+        -i|--iface: network interface to check for connection (e.g. ppp0, wwan0)
+        -n|--num-tests: number of tests to perform
+        -s|--stop-fail: stop the test at the first failure
+        -t|--time-suspend: time to wait for resume
+EOF
+}
 
 #exec 1> >(logger -s -t $(basename $0)) 2>&1
 
-PARSED_OPTIONS=$(getopt -n "$0" -o i:n:st: --long "check-communication,check-connection,dev-id:,state:,usb-persistance:,iface:,num-tests:,shutdown-mm,stop-fail,time-suspend:" -- "$@")
+PARSED_OPTIONS=$(getopt -n "$0" -o hi:n:st: --long "help,check-communication,check-connection,dev-id:,state:,usb-persistance:,iface:,num-tests:,shutdown-mm,stop-fail,time-suspend:,vid:,pid:" -- "$@")
 
 # Device configuration
 VID=413c
@@ -52,7 +58,28 @@ do
     case $1 in
         -h|--help)
             usage
+            exit 0
             shift;;
+
+        --vid)
+            if [ -n "$2" ]; then
+                VID=$2
+                shift 2
+            else
+                usage
+                exit 1
+            fi
+            ;;
+
+        --pid)
+            if [ -n "$2" ]; then
+                PID=$2
+                shift 2
+            else
+                usage
+                exit 1
+            fi
+            ;;
 
         --check-communication)
             CHECK_COMMUNICATION=1
@@ -67,7 +94,6 @@ do
                 DEV_ID=$2
                 shift 2
             else
-                echo "--dev-id requires an argument"
                 usage
                 exit 1
             fi
@@ -150,6 +176,8 @@ function err () {
 }
 
 function log_start () {
+    log "vid: ${VID}"
+    log "pid: ${PID}"
     log "check communication: ${CHECK_COMMUNICATION:-disabled}"
     log "check connection:    ${CHECK_CONNECTION:-disabled}"
     log "dev-id:              $DEV_ID"
@@ -175,7 +203,12 @@ function check_device_presence () {
 
 function check_device_communication () {
     if [ -z $CHECK_COMMUNICATION ]; then
-        log "Skipping check communication with serial device"
+        log "Skipping check communication with serial device as requested"
+        return 1
+    fi
+
+    if [ ! -z $SHUTDOWN_MM ]; then
+        err "Could not check device communication without ModemManager. Skipping this check"
         return 1
     fi
 
@@ -199,7 +232,7 @@ function check_device_communication () {
     return 0
 }
 
-function check_connection_ppp () {
+function check_connection_ifconfig () {
     if [ -z $CHECK_CONNECTION ]; then
         log "Skipping connection check"
         return 1
@@ -221,7 +254,17 @@ function check_connection_ppp () {
     return 0
 }
 
-function check_connection () {
+function check_connection_mm () {
+    if [ -z $CHECK_CONNECTION ]; then
+        log "Skipping connection check"
+        return 1
+    fi
+
+    if [ ! -z $SHUTDOWN_MM ]; then
+        err "Could not check device communication without ModemManager. Skipping this check"
+        return 1
+    fi
+
     mmid=$(mmcli -L | grep -Po "/\d+" | cut -d / -f 2)
 
     if [ ! -z $mmid ]; then
@@ -246,15 +289,23 @@ function check_connection () {
 }
 
 function check_persistance () {
-    PERST_PATH=/sys/bus/usb/devices/$DEV_ID/power/persist
+    if [ ! -z $USB_PERSISTANCE ]; then
+        PERST_PATH=/sys/bus/usb/devices/$DEV_ID/power/persist
+        if [ ! -f $PERST_PATH ]; then
+            err Could not change USB persistance: File "$PERST_PATH" does not exist.
+            return 0
+        fi
 
-    if  [ ! -z $DISABLE_PERST ]; then
-        log "Current USB persistance value $(cat $PERST_PATH). Changing it to 0."
-        echo 0 > $PERST_PATH
-        log "USB persistance value is now $(cat $PERST_PATH)."
+        log "Current USB persistance value $(cat $PERST_PATH)."
+        CUR_PERST=$(cat $PERST_PATH)
+
+        if [ $CUR_PERST != $USB_PERSISTANCE ]; then
+            echo $USB_PERSISTANCE > $PERST_PATH
+            log "New USB persistance value $(cat $PERST_PATH)."
+        else
+            log "USB persistance alredy set. Nothing to do"
+        fi
         sleep 1
-    else
-        log "Current USB persistance value $(cat $PERST_PATH). Keeping this value."
     fi
 }
 
@@ -265,7 +316,6 @@ passed_tests=0
 
 log "Test config ================"
 log_start
-exit 0
 
 
 for i in $(seq $NTESTS); do
@@ -290,7 +340,7 @@ for i in $(seq $NTESTS); do
         check_device_communication
         [ 0 -eq $? ] && ret=-2 && continue
 
-        check_connection
+        check_connection_ifconfig
         [ 0 -eq $? ] && ret=-3 && continue
 
         # All tests passed
