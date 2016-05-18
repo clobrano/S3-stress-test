@@ -5,47 +5,168 @@
 # * Check modem is registered through ModemManager
 # * Check modem is connected through ppp
 
-exec 1> >(logger -s -t $(basename $0)) 2>&1
+#function usage() {
+#    Usage:
+#        $0 [options]
+#
+#    Options:
+#    --check-communication: check whether the ModemManager can communicate with the device. MM's debug must be enabled in ordere to send AT+CSQ command.
+#    --check-connection: check whether the modem connects at resume
+#    --dev-id: the device ID in sysfs (e.g. 1-4.1, 1-8.1). This is part of the path to the power/persistance file. Not needed if --usb-persistance is not provided.
+#    --state: "mem" suspends the system to RAM (S3), "disk" to memory (S4)
+#    --usb-persistance: 0 disables USB persistance feature, 1 enables it
+#    --shutdown-mm: disable ModemManager
+#    -i|--iface: network interface to check for connection (e.g. ppp0, wwan0)
+#    -n|--num-tests: number of tests to perform
+#    -s|--stop-fail: stop the test at the first failure
+#    -t|--time-suspend: time to wait for resume
+#}
+
+#exec 1> >(logger -s -t $(basename $0)) 2>&1
+
+PARSED_OPTIONS=$(getopt -n "$0" -o i:n:st: --long "check-communication,check-connection,dev-id:,state:,usb-persistance:,iface:,num-tests:,shutdown-mm,stop-fail,time-suspend:" -- "$@")
 
 # Device configuration
 VID=413c
 PID=81bc
 DEV_ID="1-8.1"
 
-# Test configuration
+# Test configuration defaults
 STATE=mem
 IFACE=wwan0
 NTESTS=100
+TIME_SUSPEND=10
+
+
+# Test configuration fixed values
 RETRIES=10
-S3_DURATION=10
 WAIT_CONNECTION_TIME=10
 WAIT_DEVICE_TIME=1
 
-while getopts "cd:mn:pst:" opt; do
-    case $opt in
-        c)
-            CHECK_CONNECTION=1
-            ;;
-        d)
-            DEV_ID=$OPTARG
-            ;;
-        m)
-            SHUTDOWN_MM=1
-            ;;
-        n)
-            NTESTS=$OPTARG
-            ;;
-        p)
-            DISABLE_PERST=1
-            ;;
-        s)
+
+
+eval set -- "$PARSED_OPTIONS"
+
+while true;
+do
+    case $1 in
+        -h|--help)
+            usage
+            shift;;
+
+        --check-communication)
             CHECK_SERIAL=1
+            shift;;
+
+        --check-connection)
+            CHECK_CONNECTION=1
+            shift;; 
+
+        --dev-id)
+            if [ -n "$2" ]; then
+                DEV_ID=$2
+                shift 2
+            else
+                echo "--dev-id requires an argument"
+                usage
+                exit 1
+            fi
             ;;
-        t)
-            STATE=$OPTARG
+
+        --shutdown-mm)
+            SHUTDOWN_MM=1
+            shift;;
+
+        --state)
+            if [ -n "$2" ]; then
+                STATE=$2
+                shift 2
+            else
+                echo "--state requires an argument"
+                usage
+                exit 1
+            fi
             ;;
+
+        --usb-persistance)
+            if [ -n "$2" ]; then
+                USB_PERSISTANCE=$2
+                shift 2
+            else
+                echo "--usb-persistance requires an argument"
+                usage
+                exit 1
+            fi
+            ;;
+
+        -i|--iface)
+            if [ -n "$2" ]; then
+                IFACE=$2
+                shift 2
+            else
+                echo "-i|--iface requires an argument"
+                usage
+                exit 1
+            fi
+            ;;
+
+        -n|--num-tests)
+            if [ -n "$2" ]; then
+                NTESTS=$2
+                shift 2
+            else
+                echo "-n|--num-tests requires an argument"
+                usage
+                exit 1
+            fi
+            ;;
+
+        -s|--stop-fail)
+            STOP_FAIL=1
+            shift;;
+
+        -t|--time-suspend)
+            if [ -n "$2" ]; then
+                TIME_SUSPEND=$2
+                shift 2
+            else
+                echo "-t|--time-suspend requires an argument"
+                usage
+                exit 1
+            fi
+            ;;
+        --)
+            shift
+            break;;
     esac
 done
+
+
+#while getopts "cd:mn:pst:" opt; do
+#    case $opt in
+#        c)
+#            CHECK_CONNECTION=1
+#            ;;
+#        d)
+#            DEV_ID=$OPTARG
+#            ;;
+#        m)
+#            SHUTDOWN_MM=1
+#            ;;
+#        n)
+#            NTESTS=$OPTARG
+#            ;;
+#        p)
+#            DISABLE_PERST=1
+#            ;;
+#        s)
+#            CHECK_SERIAL=1
+#            ;;
+#        t)
+#            STATE=$OPTARG
+#            ;;
+#    esac
+#done
 
 function log () {
     echo "[+] " $@
@@ -53,6 +174,19 @@ function log () {
 
 function err () {
     log "[ERROR]" $@
+}
+
+function log_start () {
+    log "check communication: ${CHECK_SERIAL:-disabled}"
+    log "check connection:    ${CHECK_CONNECTION:-disabled}"
+    log "dev-id:              $DEV_ID"
+    log "state:               $STATE"
+    log "usb-persistance:     ${USB_PERSISTANCE:-not set}"
+    log "iface:               $IFACE"
+    log "num-tests:           $NTESTS"
+    log "stop-fail:           ${STOP_FAIL:-disabled}"
+    log "time-suspend:        $TIME_SUSPEND"
+    log "shutdown-mm:         ${SHUTDOWN_MM:-disabled}"
 }
 
 function check_device_presence () {
@@ -138,16 +272,16 @@ function check_connection () {
     return 0
 }
 
-function check_persistence () {
+function check_persistance () {
     PERST_PATH=/sys/bus/usb/devices/$DEV_ID/power/persist
 
     if  [ ! -z $DISABLE_PERST ]; then
-        log "Current USB persistence value $(cat $PERST_PATH). Changing it to 0."
+        log "Current USB persistance value $(cat $PERST_PATH). Changing it to 0."
         echo 0 > $PERST_PATH
-        log "USB persistence value is now $(cat $PERST_PATH)."
+        log "USB persistance value is now $(cat $PERST_PATH)."
         sleep 1
     else
-        log "Current USB persistence value $(cat $PERST_PATH). Keeping this value."
+        log "Current USB persistance value $(cat $PERST_PATH). Keeping this value."
     fi
 }
 
@@ -157,22 +291,24 @@ function check_persistence () {
 passed_tests=0
 
 log "Test config ================"
-[ ! -z $SHUTDOWN_MM ] && log "Disabling MM" || log "Keeping MM"
-[ ! -z $DISABLE_PERST ] && log "Disabling USB persistence" || log "Not disabling USB persistence"
-[ ! -z $CHECK_SERIAL ] && log "Will check serial communication"
-[ ! -z $CHECK_CONNECTION ] && log "Will check connection"
-log " "
-
-if [ ! -z $SHUTDOWN_MM ]; then
-    systemctl stop ModemManager
-fi
+log_start
+exit 0
+#[ ! -z $SHUTDOWN_MM ] && log "Disabling MM" || log "Keeping MM"
+#[ ! -z $DISABLE_PERST ] && log "Disabling USB persistance" || log "Not disabling USB persistance"
+#[ ! -z $CHECK_SERIAL ] && log "Will check serial communication"
+#[ ! -z $CHECK_CONNECTION ] && log "Will check connection"
+#log " "
+#
+#if [ ! -z $SHUTDOWN_MM ]; then
+#    systemctl stop ModemManager
+#fi
 
 for i in $(seq $NTESTS); do
-    log "Test #$i/$NTESTS (#$passed_tests passed): suspend $VID:$PID to $STATE for $S3_DURATION sec."
+    log "Test #$i/$NTESTS (#$passed_tests passed): suspend $VID:$PID to $STATE for $TIME_SUSPEND sec."
 
-    check_persistence
+    check_persistance
 
-    rtcwake -m $STATE -s $S3_DURATION
+    rtcwake -m $STATE -s $TIME_SUSPEND
 
     log " "
     log "Test S3 #$i/$NTESTS: wake up"
@@ -184,7 +320,7 @@ for i in $(seq $NTESTS); do
         check_device_presence
         [ 0 -eq $? ] && ret=-1 && continue
 
-        check_persistence
+        check_persistance
 
         check_device_communication
         [ 0 -eq $? ] && ret=-2 && continue
